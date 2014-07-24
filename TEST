@@ -1,0 +1,10 @@
+type integer;
+type boolean = enum (true, false);
+
+process P = (? integer a; boolean b; ! integer u, v, x, y, z;)(
+|x := a when b
+|y := x +1
+|z := a +3
+|u := (y $1 init 0) default 0
+|v := (y $1 init 1) default 1
+|)end;
