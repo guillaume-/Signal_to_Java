@@ -34,12 +34,15 @@ module Apl_chk_spec:aParam = struct
 		in s.tv_type_name
 
 	let chk_sig param decs sA =
-		let s = try List.find	(fun e -> e.signal_name = sA)
+		let sa =if(sA.[0]='^')
+				then String.sub sA 1 ((String.length sA) -1)
+				else sA
+		in let s = try List.find	(fun e -> e.signal_name = sa)
 								(decs.input_signal_list@decs.output_signal_list@decs.local_signal_list)
 				with Not_found ->	let p = (List.hd param.proc_cur) 
-									in try (ignore (chk_var param p sA);
-											raise (Type_mismatch("Signal waited but "^sA^" found as enum")))
-										with Undefined(_) -> raise (Undefined("Signal "^sA^"\ndeclarations = "^Ter_toString.str_signal_declarations decs))
+									in try (ignore (chk_var param p sa);
+											raise (Type_mismatch("Signal waited but "^sa^" found as enum")))
+										with Undefined(_) -> raise (Undefined("Signal "^sa^"\ndeclarations = "^Ter_toString.str_signal_declarations decs))
 		in s.signal_type
 
 	let rec chk_exp param =
@@ -161,11 +164,11 @@ module Apl_chk_spec:aParam = struct
 					else test_rest
  
 	let apl_sig_declas param isl osl losl =
-		if((List.for_all (fun e -> e.signal_direction = Input) isl)
-			&& (List.for_all (fun e -> e.signal_direction = Output) osl)
-			&& (List.for_all (fun e -> e.signal_direction = Local) losl))
+		if((List.for_all (fun e -> e.signal_direction = Input && e.signal_name.[0] != '^') isl)
+			&& (List.for_all (fun e -> e.signal_direction = Output && e.signal_name.[0] != '^') osl)
+			&& (List.for_all (fun e -> e.signal_direction = Local && e.signal_name.[0] != '^') losl))
 		then param
-		else raise (Incompatible_definitions(" in process "^((List.hd param.proc_cur).header.process_name)^", some signals are record in a list that mismatch with the direction"))
+		else raise (Incompatible_definitions(" in process "^((List.hd param.proc_cur).header.process_name)^", some signals are defined using the reserved clock character '^'"))
 
 	let apl_sig_decla param name stype dir =
 		if(List.exists (fun e -> e.tv_type_name = stype) param.spec.type_declaration_list)
@@ -197,10 +200,13 @@ module Apl_chk_spec:aParam = struct
 	let apl_assign param asn ae =
 		assert_signal_not_selfdependent asn ae;
 		let decs = (List.hd param.proc_cur).header.signal_declarations
-		in let s =	try List.find (fun e -> e.signal_name = asn) (decs.output_signal_list @ decs.local_signal_list)
-					with Not_found ->	if(List.exists (fun e -> e.signal_name = asn) decs.input_signal_list)
-										then raise (Incompatible_direction(asn^" defined as input, but is used as output"))
-										else raise (Undefined(" signal "^asn^" in process "^((List.hd param.proc_cur).header.process_name)))
+		in let sa =if(asn.[0]='^')
+				then String.sub asn 1 ((String.length asn) -1)
+				else asn
+		in let s =	try List.find (fun e -> e.signal_name = sa) (decs.output_signal_list @ decs.local_signal_list)
+					with Not_found ->	if(List.exists (fun e -> e.signal_name = sa) decs.input_signal_list)
+										then raise (Incompatible_direction(sa^" defined as input, but is used as output"))
+										else raise (Undefined(" signal "^sa^" in process "^((List.hd param.proc_cur).header.process_name)))
 		in let ty = try(List.hd param.exp_types)
 					with Failure(_) -> raise (Bad_construction("Assignation without expression defined"))
 		in	if(ty = s.signal_type)

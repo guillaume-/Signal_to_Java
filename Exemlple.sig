@@ -6,6 +6,7 @@ process P = (? integer a; boolean b; ! integer plop, u, v, w, x, y, z;)(
 |x := a when b
 |y := x +1
 |z := a +3
+|^z := ^a
 |u := (y $1 init 0)
 |v := u default 0
 |submodule Exemple(w)(u)

@@ -29,7 +29,9 @@ type ref = {
 	include Identite(MbParam)
 
 	let rec exp_to_kons = function
-		SignalAtom(id) -> K_V(id)
+		SignalAtom(id) ->	if(id.[0] = '^')
+							then K_V(String.sub id 1 ((String.length id) -1))
+							else K_V(id)
 		| ClockPlus(e1, e2) -> K_Bin_op(exp_to_kons e1, "^+", exp_to_kons e2)
 		| ClockMinus(e1, e2) -> K_Bin_op(exp_to_kons e1, "^-", exp_to_kons e2)
 		| ClockTimes(e1, e2) -> K_Bin_op(exp_to_kons e1, "^*", exp_to_kons e2)
@@ -143,7 +145,16 @@ type ref = {
 		};
 	}
 
-	let apl_assign param asn ae = match(ae)with
+	let apl_assign param asn ae = 
+		if(asn.[0] = '^')
+		then {
+			spec = param.spec;
+			gr = {
+				param.gr with
+				g_kons = K_Bin_op(K_V(asn), "=", exp_to_kons ae)::param.gr.g_kons;
+			}
+		}
+		else match(ae)with
 		ClockPlus(_)
 		| ClockMinus(_)
 		| ClockTimes(_) -> {
