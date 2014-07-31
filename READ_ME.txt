@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+﻿Résultat : dossier src	contenant du code Java correspondant au fichier_signal
+
+>>>>>>> origin/master
 Compiler :
 make
 
@@ -7,6 +12,7 @@ make clean
 Exécuter :
 ./main < fichier_signal
 
+<<<<<<< HEAD
 Résultat : dossier src contenant du code Java correspondant au fichier_signal
 
 Fonctionnement :
@@ -18,6 +24,10 @@ Hypothèses :
 - une assignation utilisant un delay ne peut initialiser la variable qu'avec une seule valeur
 > si on gère plus qu'un code applatit, il resterait des traitements pour gérer la forme
 > (x $1 init 0) + (x $1 init 1)
+=======
+Fonctionnement INRIA :
+cf "Comptes Rendus/Présentation 31.07.2014.pdf"
+>>>>>>> origin/master
 
 Derniers ajouts:
 	gérer import Usable.* si usage de Call dans une tâche
@@ -39,5 +49,9 @@ Derniers ajouts:
 À gérer:
 	Les contraintes d'horloge sont sauvegardées dans g_kons, mais inutilisées
 	{ a := b
+<<<<<<< HEAD
 	a := c } est accepté, mais l'une des 2 instructions est actuellement ignorée côté Java
 
+=======
+	a := c } est accepté, mais l'une des 2 instructions est actuellement ignorée
+>>>>>>> origin/master
