@@ -1,5 +1,4 @@
-﻿Résultat : dossier src
-	contenant du code Java correspondant au fichier_signal
+﻿Résultat : dossier src	contenant du code Java correspondant au fichier_signal
 
 Compiler :
 make
@@ -11,7 +10,7 @@ Exécuter :
 ./main < fichier_signal
 
 Fonctionnement INRIA :
-cf "Comptes Rendus/Présentation 30.07.2014.pdf"
+cf "Comptes Rendus/Présentation 31.07.2014.pdf"
 
 Derniers ajouts:
 	gérer import Usable.* si usage de Call dans une tâche
