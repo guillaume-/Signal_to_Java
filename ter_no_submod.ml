@@ -41,11 +41,11 @@ module Tfr_no_submodule = struct
 			type_declaration_list = tvs;
 			procedure_declaration_list = pd;
 		}, param)
-		
-let build_currents param ph pb =
+
+	let build_currents param ph pb =
 		let rec locals p res newStat =
 			let tmp_res = (List.rev p.header.local_process_list) 
-			in if (List.length p.header.local_process_list)>0
+			in if(List.length p.header.local_process_list)>0
 				then locals (List.hd tmp_res) (tmp_res@res) false
 				else res, newStat
 		in let res, newState =	try(locals (List.hd (List.tl param.proc_cur)) [] true)
@@ -104,8 +104,6 @@ let build_currents param ph pb =
 			ou si expression complexe passée en entrée)
 		- pour chaque contrainte / assignation / instantiation :
 				change le nom de celle ci (partie gauche)
-				TODO : remplace chaque signal par son correspondant
-					dans l'expression (partie droite)
  **********************************************************************)
 	let tfr_inst param ipn ios iie = 
 		let pcur_h_ploc = (List.hd param.proc_cur).header.local_process_list
@@ -115,7 +113,7 @@ let build_currents param ph pb =
 					let s = newStr ()
 					in if List.exists (fun e -> e=s) env
 						then create_name env debut
-						else debut^s  (* TODO : verif nom inexistant *)
+						else debut^s
 
 			and find_name n li = let _,name = try List.find (fun (n1,_) -> n1 = n) li 
 												with | Not_found -> failwith ("FAIL : "^n)
@@ -174,8 +172,8 @@ let build_currents param ph pb =
 			in let find = List.find (fun p -> p.header.process_name = ipn)
 				in let p_ref = try find pcur_h_ploc
 								with Not_found -> try find param.proc_cur
-													with Not_found -> try find param.modif.n_loc
-																		with Not_found -> failwith "ATTENTION, CHECK NON COMPLET !!"
+													with Not_found ->try find param.modif.n_loc
+																	 with Not_found -> failwith "ATTENTION, CHECK NON COMPLET !!"
 					in let ref_in = p_ref.header.signal_declarations.input_signal_list 
 						and ref_out = p_ref.header.signal_declarations.output_signal_list
 						and ref_loc = p_ref.header.signal_declarations.local_signal_list 
@@ -239,13 +237,13 @@ let build_currents param ph pb =
 
 
 	let tfr_proc_bd gparam gal gcl gil =
-		let rec no_multiple_out_define = function
+		(*let rec no_multiple_out_define = function
 			|[] -> []
 			|e::l ->	if(List.exists (fun x -> x.assigned_signal_name 
 										= e.assigned_signal_name) l)
 						then no_multiple_out_define l
 						else e::(no_multiple_out_define l)
-		in let rec t_proc_bd param al cl il =
+		in *)let rec t_proc_bd param al cl il =
 			let nal = param.modif.n_bdy.assignment_list
 			and ncl = param.modif.n_bdy.constraint_list
 			and nil = param.modif.n_bdy.instantiation_list
@@ -253,7 +251,7 @@ let build_currents param ph pb =
 			and nsig = param.modif.n_sig
 			in(* (print_string ("Test: \n"^Ter_toString.str_assignment al));*)
 				if nil = []
-				then ({ assignment_list = no_multiple_out_define (nal@gal) ;
+				then ({ assignment_list = (*no_multiple_out_define*) (nal@gal) ;
 						constraint_list = ncl@gcl ;
 						instantiation_list = nil ;},param) 
 				else 

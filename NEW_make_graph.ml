@@ -43,7 +43,7 @@ type ref = {
 		| NotAtom(id) -> Una_op("not", V(id))
 		| WhenAtom(id) -> Una_op("when", V(id))
 		| When(e1, e2) -> Bin_op(exp_to_exp e1, "when", exp_to_exp e2)
-		| EqualityAtom(e1, e2) -> Bin_op(exp_to_exp e1, "=", exp_to_exp e2)
+		| EqualityAtom(e1, e2) -> Bin_op(exp_to_exp e1, "==", exp_to_exp e2)
 		| Delay(e1, e2) -> Bin_op(exp_to_exp e1, "$1 init ", exp_to_exp e2)
 		| Default(e1, e2) -> Bin_op(exp_to_exp e1, "default", exp_to_exp e2)
 		| AndExp(e1, e2) -> Bin_op(exp_to_exp e1, "&&", exp_to_exp e2)

@@ -36,6 +36,8 @@ public abstract class Ter_Runnable implements Runnable{
 
 \tpublic abstract boolean compute();
 
+\tpublic abstract boolean present();
+
 \t@Override
 \tpublic void run(){
 \t\tSystem.out.println(this);
@@ -236,6 +238,11 @@ let parse_type = function
 	|"bool" |"boolean" |"Boolean" -> "Bool"
 	|x -> x
 
+let parse_type_2 = function
+	|"int" |"integer" |"Integer" -> "int"
+	|"bool" |"boolean" |"Boolean" -> "boolean"
+	|x -> x
+
 (**********************************************************
 ************************DATA*******************************
 **********************************************************)
@@ -305,7 +312,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import thread.Ter_Runnable;\n"
-^(if(g.g_enums != [])then "import usable.Usable;\n" else "")
+^(if(g.g_enums != [])then "import usable.Usable.*;\n" else "")
 ^"public class GlobalData{
 	private InputStream ips; 
 	private InputStreamReader ipsr;
@@ -326,6 +333,37 @@ import thread.Ter_Runnable;\n"
 
 	public void add_runnable(Ter_Runnable t){
 		tasks.add(t);
+	}
+
+	public boolean isPresent(String clock){
+		String res = \"\";
+		int ind = 0;
+		int k;
+		if(line==null)
+			return false;
+		/*forme du fichier txt :
+		 espace nom espace = espace valeur; espace nom2 ...
+		 \\n pour nouvelles données
+		*/
+		for(int i=1; (ind==0) && (line.length()-5)>=i; i++){
+			k = i;
+			if(line.charAt(k-1)==' ')
+				for(int j=0; line.charAt(k)==clock.charAt(j); j++){
+					if((clock.length() == (j+1)) && (line.charAt(k+1)==' ')){
+						ind=k+4;
+						break;
+					}
+					k++;
+				}
+		}
+		if(ind!=0){
+			for(k=ind; line.charAt(k) != ';'; k++)
+				res += line.charAt(k);
+			if(res.equals(\"*\"))
+				return false;
+			return Boolean.parseBoolean(res);
+		}else
+			return false;
 	}
 
 	public void new_line(String s){
@@ -439,7 +477,55 @@ let create_Ter_runnable () =
 	in fprintf file "%s" str_of_Ter_runnable;
 	close_out file
 
-let str_exp tname pname e = ""
+let str_of_e = 
+	let rec str_of_Exp res = function
+	V("true") -> "true", res
+	|V("false") -> "false", res
+	|V(s)-> "data."^s^"0.getT()", res
+	|C(s)|B(s)|Enum(s) -> s, res
+	|Bin_op(e1, "when", e2) ->  let tmp1 = (str_of_Exp res e1) in
+								let tmp2 = (str_of_Exp (snd(tmp1)) e2) in
+								fst(tmp1), ("\t\tif("^(fst(tmp2))^"){\n\t")::snd(tmp2)
+	|Una_op("when not", V(id)) -> "", ("\t\tif(!data."^id^".getT()){\n\t")::res
+	|Una_op("when", V(id)) -> "", ("\t\tif(data."^id^".getT()){\n\t")::res
+	|Bin_op(V(s), "$1 init ", e) -> (s^"1.getT()", res)
+	|Bin_op(C(s), "default", e2)|Bin_op(B(s), "default", e2)|Bin_op(Enum(s), "default", e2)
+	-> s, res
+	|Bin_op(V("true"), "default", e2) -> "true", res
+	|Bin_op(V("false"), "default", e2) -> "false", res
+	|Bin_op(V(s), "default", e2)->let tmp1 = (str_of_Exp res (V(s))) in
+								let tmp2 = (str_of_Exp (snd(tmp1)) e2) in
+								"data."^s^"0.present() ? "^fst(tmp1)^" : "^fst(tmp2)^")", snd(tmp2)
+	|Bin_op(e1, s, e2)->let tmp1 = (str_of_Exp res e1) in
+						let tmp2 = (str_of_Exp (snd(tmp1)) e2) in
+						fst(tmp1)^" "^s^" "^fst(tmp2), snd(tmp2)
+	|Una_op("not", V(id)) -> ("!("^id^")", res)
+	|Call(s, eL) -> let rec f res = function
+					[] -> "", res
+					|e::[] -> str_of_Exp res e
+					|e::l -> let tmp1 = (str_of_Exp res e) in
+							 let tmp2 = (f (snd(tmp1)) l) in
+							 (fst(tmp1)^", "^fst(tmp2)), snd(tmp2)
+					in let tmp = f res eL
+					in "Usable."^s^"("^fst(tmp)^")", snd(tmp)
+	|_ -> "", res
+	in str_of_Exp []
+
+let rec str_snd = function
+	[] -> ""
+	|s::l -> s^(str_snd l)
+
+let rec str_snd_end tname = function
+	[] -> ""
+	|s::l -> "\n\t\t}else{\n\t\t\tSystem.out.println(\""^tname^" : fin\");\n\t\t\treturn false;\n\t\t}"
+
+let str_exp tname pname e =
+		let res = str_of_e e in
+		(str_snd (snd(res)))
+^"		data."^pname^"0.setT("^(fst(res))^");
+		System.out.println(\""^tname^" : fin\");
+		return true;"
+^str_snd_end tname (snd(res))
 
 let str_expression tname pname = function
 	None -> "\t\tboolean b = data."^pname^"0.read_name(data.line, \""^pname^"\", this);
@@ -447,25 +533,90 @@ let str_expression tname pname = function
 \t\treturn b;"
 	|Some(e) -> str_exp tname pname e
 
+let rec str_delays_init = function
+	[] -> ""
+	|d::l ->"\tSignal_"^(parse_type d.d_type)^" "^d.d_name^"1 = null;\n"^(str_delays_init l)
+
 let rec str_delays = function
 	[] -> ""
-	|d::l ->"\tSignal_"^(parse_type d.d_type)^" "^d.d_name^"1 = new Signal_"^(parse_type d.d_type)^"();\n"^(str_delays l)
+	|d::l ->let res = str_of_e d.d_value in
+			(str_snd (snd(res)))
+			^"\t\tif("^d.d_name^"1==null)\n\t\t\t"
+			^d.d_name^" = new Signal_"^(parse_type d.d_type)^"("^fst(res)^");\n"
+			^(str_delays l)
+
+let rec exp_contains_call = function
+	V(_)|C(_)|B(_) -> false
+	|Enum(_) -> false
+	|Bin_op(e1, _, e2) -> (exp_contains_call e1) || (exp_contains_call e2)
+	|Una_op(_, e) -> exp_contains_call e
+	|Call(_) -> true
+
+let import_usable t = match(t.t_do.port_assign)with
+	None -> ""
+	|Some(x) ->	if(exp_contains_call x)then "import usable.Usable;\n"
+				else ""
+
+let rec exp_contains_enum =
+	let rec rule_calls = function
+		[] -> false
+		|e::l -> (exp_contains_enum e)||(rule_calls l)
+	in function
+	V(_)|C(_)|B(_) -> false
+	|Enum(_) -> true
+	|Bin_op(e1, _, e2) -> (exp_contains_enum e1) || (exp_contains_enum e2)
+	|Una_op(_, e) -> exp_contains_enum e
+	|Call(_, eL) -> rule_calls eL
+
+
+let import_usable_types t = match(t.t_do.port_assign)with
+	None -> ""
+	|Some(x) ->	if(exp_contains_enum x)then "import usable.Usable.*;\n"
+				else ""
+
+let str_of_delays = function
+	[] -> ""
+	|d::l -> "\t\t"^d.d_name^"1 = data."^d.d_name^"0;\n"
 
 let newTask g t =
 	let name = t.t_id
+	in let delays = t.t_do.port_delays
 	in let str g t ="package thread;
 import java.util.concurrent.ExecutorService;
-import data.GlobalData;
-public class "^name^" extends Ter_Runnable{\n"
-^(str_delays t.t_do.port_delays)^"
+import data.*;\n"
+^(import_usable t)
+^(import_usable_types t)
+^"public class "^name^" extends Ter_Runnable{\n"
+^(str_delays_init t.t_do.port_delays)^"
 \tpublic "^name^"(int num, GlobalData gd, int nbDependances, ExecutorService e){
 \t\tsuper(num, gd, nbDependances, e);
 \t}\n
 \t@Override
 \tpublic boolean compute(){
+\t\tif(! present())
+\t\t\treturn false;
 \t\tSystem.out.println(\""^name^" : début\");\n"
-^str_expression name t.t_do.port_name t.t_do.port_assign
-^"\n\t}\n}\n"
+^(str_delays delays)
+^(str_expression name t.t_do.port_name t.t_do.port_assign)
+^"\n\t}\n"
+^(
+if(List.length delays)>0
+then "\n	@Override
+	public void reset(){
+		super.reset();
+"^(str_of_delays delays)
+^"	}\n"
+else ""
+)
+^(if(t.t_do.port_assign = None)
+then "\n	@Override
+	public boolean present(){
+		return true;
+	}\n}\n"
+else "\n	@Override
+	public boolean present(){
+		return data.isPresent(\"^"^t.t_do.port_name^"\");
+	}\n}\n")
 	in let file = open_out ("src/thread/"^name^".java")
 	in fprintf file "%s" (str g t);
 	close_out file
@@ -483,23 +634,48 @@ let create_thread g =
 **********************************************************)
 
 let rec str_enums =
-	let rec str_enum = function
+	let create_Enum e =
+		let str e =
+"package data;
+import thread.Ter_Runnable;
+import usable.Usable."^e^";
+public class Signal_"^e^" extends Signal<"^e^">{
+	@Override
+	public boolean read_name(String line, String name, Ter_Runnable th){
+		String s = get_res(line, name, th);
+		if(s.equals(\"*\")){
+			t = null;
+			return false;
+		}
+		else{
+			t = "^e^".valueOf(s);
+			return true;
+		}
+	}
+}\n"
+		in let file = open_out ("src/data/Signal_"^e^".java")
+		in fprintf file "%s" (str e);
+		close_out file
+	in let rec str_enum = function
 		[] -> ""
 		|e::[] -> e
 		|e::l -> e^", "^(str_enum l)
 	in function
 	[] -> ""
-	|e::l -> "\tpublic enum "^e.e_name^"{"^(str_enum e.e_values)^"}\n"
+	|e::l -> (create_Enum e.e_name); "\tpublic enum "^e.e_name^"{"^(str_enum e.e_values)^"}\n"
 
 let rec str_procedures =
 	let rec str_p i = function
 		[] -> ""
-		|e::[] -> e^" i"^(string_of_int i)
-		|e::l -> (e^" i"^(string_of_int i)^", ")^(str_p (i+1) l)
+		|e::[] -> (parse_type_2 e)^" i"^(string_of_int i)
+		|e::l -> ((parse_type_2 e)^" i"^(string_of_int i)^", ")^(str_p (i+1) l)
 	in function
 	[] -> ""
-	|p::l -> 
-	"\tpublic "^p.proc_out_type^" "^p.proc_name^"("^(str_p 0 p.proc_in_types)^")throws Uncoded_function{
+	|p::l -> match(p.proc_name)with
+	 "add" -> "\tpublic static int add(int i1, int i2){\n\t\treturn(i1+i2);\n\t}\n"
+	|"mul" -> "\tpublic static int mul(int i1, int i2){\n\t\treturn(i1*i2);\n\t}\n"
+	|"sub" -> "\tpublic static int sub(int i1, int i2){\n\t\treturn(i1-i2);\n\t}\n"
+	|_ -> "\tpublic static "^(parse_type_2 p.proc_out_type)^" "^p.proc_name^"("^(str_p 0 p.proc_in_types)^")throws Uncoded_function{
 		throw new Uncoded_function();
 	}\n"
 

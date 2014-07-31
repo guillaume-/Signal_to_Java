@@ -22,10 +22,8 @@ let spec_2 =
 print_string "----------------- Suppression des submodules -----------------\n";
 			 noSub spec_1;;
 
+let gr = mk_graph spec_2;;
+graph_to_java gr;;
 
 let str = Ter_toString.str_specification spec_2;;
-
-let gr = mk_graph spec_2;;
-
-graph_to_java gr;;
 print_string str;;

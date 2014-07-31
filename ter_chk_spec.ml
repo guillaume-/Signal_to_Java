@@ -177,7 +177,25 @@ module Apl_chk_spec:aParam = struct
 					else param
 		else raise (Undefined("Type "^stype^"at the declaration of"^name))
 
+	let rec assert_signal_not_selfdependent name = function
+		|SignalAtom(e)
+		-> if(e = name)then failwith("signal "^e^" selfdependent") else ()
+		|IntegerConstant(_) |EnumVariantAtom(_) |InAtom(_)
+		-> ()
+		|When(e1, e2) |EqualityAtom(e1, e2) |AndExp(e1, e2) |OrExp(e1, e2)
+		|Plus(e1, e2) |Minus(e1, e2) |Times(e1, e2) |ClockPlus(e1, e2) 
+		|ClockMinus(e1, e2) |ClockTimes(e1, e2) |Default(e1, e2)
+		-> assert_signal_not_selfdependent name e1; 
+		   assert_signal_not_selfdependent name e2
+		|WhenAtom(e) |WhenNotAtom(e) |NotAtom(e)
+		-> assert_signal_not_selfdependent name (SignalAtom(e))
+		|Delay(e1, e2)
+		-> assert_signal_not_selfdependent name e2
+		|FunctionCall(f, expL)
+		-> List.iter (assert_signal_not_selfdependent name) expL
+
 	let apl_assign param asn ae =
+		assert_signal_not_selfdependent asn ae;
 		let decs = (List.hd param.proc_cur).header.signal_declarations
 		in let s =	try List.find (fun e -> e.signal_name = asn) (decs.output_signal_list @ decs.local_signal_list)
 					with Not_found ->	if(List.exists (fun e -> e.signal_name = asn) decs.input_signal_list)

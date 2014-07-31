@@ -69,7 +69,7 @@ rule lexer = parse
 			LINT (int_of_string(Lexing.lexeme lexbuf)) }
 |   '%'['\n'-'\r' ' '-'$' '&'-'~']*'%' { lexer lexbuf }
 |   eof { scanner_debug_print "Scanner:Eof" ; Leof }
-|   ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '_' '0'-'9']* 
+|   ['a'-'z' 'A'-'Z' '_' '^'] ['a'-'z' 'A'-'Z' '_' '0'-'9']* 
     {
      
      let str= Lexing.lexeme lexbuf in 

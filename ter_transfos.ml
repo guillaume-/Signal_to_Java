@@ -18,7 +18,7 @@ let id prog =
 let noSub prog =
 	let module Trans = Tfr_no_submodule
 	in let module Apply_transfo = Transformation(Trans) 
-		in (Apply_transfo.transform_spec prog) 
+		in Apply_transfo.transform_spec prog
 
 let addCall prog =
 	let module Trans = Tfr_arith_to_call
