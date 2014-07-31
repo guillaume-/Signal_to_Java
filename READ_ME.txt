@@ -1,7 +1,4 @@
-2 versions :
-	- Boxes - pour que le résultat soit l'affichage sous forme de 
-	chaîne de caractères d'une boîte
-	- INRIA - dernière version, pour que le résultat soit un dossier src
+﻿Résultat : dossier src
 	contenant du code Java correspondant au fichier_signal
 
 Compiler :
